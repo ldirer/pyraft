@@ -203,7 +203,7 @@ class RaftLogic:
             self.state.voted_for = self.node_id
             self.reset_election_timer()
         else:
-            # Not resetting because it's nice to check that in tests.
+            # Not resetting because it's nice to record and observe that in tests.
             # self.votes_for_term = None
             pass
 

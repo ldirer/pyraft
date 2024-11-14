@@ -6,6 +6,8 @@ import random
 from dataclasses import dataclass
 from dataclasses import field
 
+import pytest
+
 from raft_server import RaftServer
 from raftconfig import ELECTION_TIMEOUT_TICKS_MAX
 from raftconfig import HEARTBEAT_INTERVAL_TICKS
@@ -23,7 +25,8 @@ def process_message(message, nodes_by_id):
     dest_node.process_event(message)
 
 
-def test_log_replication(caplog):
+@pytest.mark.parametrize("iteration", range(10))
+def test_log_replication(caplog, iteration):
     seed = int(os.environ.get("RAFT_SEED", str(random.randint(1, 10000))))
     random.seed(seed)
     print("random seed: ", seed)
@@ -94,7 +97,8 @@ def test_log_replication(caplog):
 
     nodes_by_id = {node.node_id: node for node in nodes}
 
-    schedule_invariant_checks(sim, nodes_by_id)
+    previous = Previous()
+    schedule_invariant_checks(sim, nodes_by_id, previous)
 
     schedule_clock_ticks(sim, nodes_by_id)
     n_commands = 10
@@ -211,11 +215,7 @@ class Previous:
     leaders: list = field(default_factory=list)
 
 
-# global objects FTW
-previous = Previous()
-
-
-def assert_leader_completeness(sim, nodes_by_id):
+def assert_leader_completeness(sim, nodes_by_id, previous: Previous):
     """Figure 3: "Leader Completeness"
 
     If a log entry is committed in a given term, then that entry will be present in the logs of the
@@ -266,19 +266,19 @@ def assert_leader_completeness(sim, nodes_by_id):
     previous.leader_term_id = leader.node_id if leader is not None else None
 
 
-def assert_clock_moving(nodes_by_id):
+def assert_clock_moving(nodes_by_id, previous: Previous):
     for node in nodes_by_id.values():
         new_clock = node.logic.clock
         assert new_clock > previous.clocks.get(node.node_id, -1), "test setup is broken"
         previous.clocks[node.node_id] = new_clock
 
 
-def schedule_invariant_checks(sim, nodes_by_id):
+def schedule_invariant_checks(sim, nodes_by_id, previous: Previous):
     def check_invariants():
         assert_election_safety(nodes_by_id)
-        assert_leader_completeness(sim, nodes_by_id)
-        assert_clock_moving(nodes_by_id)
+        assert_leader_completeness(sim, nodes_by_id, previous)
+        assert_clock_moving(nodes_by_id, previous)
 
     sim.after_delay(0, check_invariants)
     # I'm not exactly sure when the checks will run relative to other events...
-    sim.after_delay(1, lambda: schedule_invariant_checks(sim, nodes_by_id))
+    sim.after_delay(1, lambda: schedule_invariant_checks(sim, nodes_by_id, previous))
