@@ -13,16 +13,12 @@ repos:
         exclude: |
           (?x)^(
             README.md|
-            docs/.*|
-            traffic/.*|
             \.idea/.*
           )
       - id: trailing-whitespace
         exclude: |
           (?x)^(
             README.md|
-            docs/.*|
-            traffic/.*|
             \.idea/.*
           )
   - repo: https://github.com/charliermarsh/ruff-pre-commit
