@@ -1,0 +1,9 @@
+target-version="py39"
+line-length=120
+
+[lint]
+# Need to tell ruff about isort https://github.com/astral-sh/ruff/issues/8926
+extend-select = ["I"]
+
+[lint.isort]
+force-single-line=true
